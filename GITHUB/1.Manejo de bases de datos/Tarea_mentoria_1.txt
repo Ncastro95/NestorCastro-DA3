@@ -1,0 +1,60 @@
+-- 2-Animes con mayor episodios por tipo
+
+WITH AnimeConNumeracion AS (
+    SELECT
+        tipo,
+       nombre,
+      episodios,
+        ROW_NUMBER() OVER (PARTITION BY tipo ORDER BY episodios DESC) AS NumeroDeFila
+    FROM anime
+)
+SELECT tipo,
+       nombre,
+      episodios
+FROM AnimeConNumeracion
+WHERE NumeroDeFila = 1 AND tipo IS NOT null
+Order by episodios DESC;
+
+
+--3 tipo de anime con mayor cantida de mienbros
+SELECT tipo, sum(miembros) AS total_miembros
+FROM anime
+GROUP BY tipo
+ORDER BY total_miembros DESC
+LIMIT 1;
+
+--4 valide que el rating promedio del archivo anime, sea el mismo que el rating del archivo rating
+SELECT AVG(calificacion) AS rating_anime,
+  (SELECT AVG(calificacion) FROM calificacion WHERE calificacion >=0) AS ranting_calificacion,
+  CASE 
+    WHEN AVG(calificacion) = (SELECT AVG(calificacion) FROM calificacion WHERE calificacion >=0) THEN 'RATING ES IGUAL'
+    ELSE 'RATING NO ES IGUAL'
+  END AS RESULTADO
+FROM anime;
+
+--5 Cual es el anime que posee mayor cantidad de calificaciones de los miembros
+SELECT nombre, COUNT (Id_usuario) AS calificaciones
+FROM anime
+JOIN calificacion on anime.id_anime = calificacion.id_anime
+GROUP BY nombre
+ORDER BY calificaciones DESC
+LIMIT 1;
+--6 del genero Sci-Fi, cual es el anime mayor calificado? cual es el que tiene el mayor raiting
+SELECT nombre,genero, COUNT (Id_usuario) AS calificaciones FROM anime
+     JOIN calificacion on anime.id_anime = calificacion.id_anime
+     Where genero LIKE '%Sci-Fi%' OR genero LIKE 'Sci-Fi%' OR  genero LIKE '%Sci-Fi'
+GROUP BY nombre, genero
+ORDER BY calificaciones DESC
+--7del top 10 de miembros que mas han valorado, cual es el anime que tiene mas capitulos que el miembro califico
+SELECT C.id_usuario, COUNT(C.calificacion) AS total_valoraciones, MAX(A.episodios) AS max_episodios,
+    (SELECT A.nombre FROM calificacion  C2
+     INNER JOIN anime A ON C2.id_anime = A.id_anime
+     WHERE C2.id_usuario = C.id_usuario
+     ORDER BY A.episodios DESC
+     LIMIT 1) AS anime_max_episodios
+FROM calificacion  C
+INNER JOIN anime A ON C.id_anime = A.id_anime
+WHERE C.calificacion >= 0
+GROUP BY C.id_usuario
+ORDER BY total_valoraciones DESC
+LIMIT 10;
